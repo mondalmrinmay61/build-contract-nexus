@@ -11,26 +11,40 @@ import HowItWorks from "./pages/HowItWorks";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import NotFound from "./pages/NotFound";
+import { AuthProvider } from "./context/AuthContext";
+import Dashboard from "./pages/Dashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<Index />} />
+    <Route path="/about" element={<About />} />
+    <Route path="/how-it-works" element={<HowItWorks />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<Register />} />
+    
+    <Route element={<ProtectedRoute />}>
+      <Route path="/dashboard" element={<Dashboard />} />
+    </Route>
+    
+    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <BrowserRouter>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <AppRoutes />
+        </AuthProvider>
+      </TooltipProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

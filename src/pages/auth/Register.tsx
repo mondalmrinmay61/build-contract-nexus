@@ -1,63 +1,53 @@
 
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+const registerSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  userType: z.enum(["client", "contractor"], { 
+    required_error: "Please select a user type"
+  })
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
-  const [searchParams] = useSearchParams();
-  const defaultType = searchParams.get("type") === "contractor" ? "contractor" : "client";
-  
-  const [userType, setUserType] = useState<"client" | "contractor">(defaultType as "client" | "contractor");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [phone, setPhone] = useState("");
+  const { signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      return;
-    }
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      userType: "client",
+    },
+  });
 
+  const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-
-    // This is just a placeholder - we'll integrate with Supabase later
     try {
-      // Simulate API request
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Info",
-        description: "This is a demo. Registration will be implemented with Supabase.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An error occurred during registration.",
-        variant: "destructive",
+      await signUp(data.email, data.password, {
+        name: data.name,
+        user_type: data.userType
       });
     } finally {
       setIsLoading(false);
@@ -67,119 +57,134 @@ const Register = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
-      <main className="flex-grow bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <Card className="w-full max-w-md mx-auto">
-          <CardHeader>
-            <CardTitle className="text-center text-2xl">Create an account</CardTitle>
-            <CardDescription className="text-center">
-              Sign up to start {userType === "client" ? "posting projects" : "finding work"}
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="flex space-x-4">
-                <Button 
-                  type="button"
-                  variant={userType === "client" ? "default" : "outline"}
-                  className="w-1/2"
-                  onClick={() => setUserType("client")}
-                >
-                  I'm a Client
-                </Button>
-                <Button 
-                  type="button"
-                  variant={userType === "contractor" ? "default" : "outline"}
-                  className="w-1/2"
-                  onClick={() => setUserType("contractor")}
-                >
-                  I'm a Contractor
-                </Button>
-              </div>
+      <div className="flex-grow flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Create a new account
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Or{" "}
+              <Link to="/login" className="font-medium text-green-600 hover:text-green-500">
+                sign in to your account
+              </Link>
+            </p>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email address</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="email" 
+                        placeholder="email@example.com" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              {userType === "client" && (
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company Name</Label>
-                  <Input 
-                    id="company"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input 
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="userType"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>I am a:</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-col space-y-1"
+                      >
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="client" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Client - I want to post projects
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="contractor" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Contractor - I want to find work
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input 
-                  id="confirmPassword" 
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
-              <p className="text-center text-sm">
-                Already have an account?{" "}
-                <Link to="/login" className="text-blue-600 hover:text-blue-800">
-                  Sign in
-                </Link>
-              </p>
-            </CardFooter>
-          </form>
-        </Card>
-      </main>
+            </form>
+          </Form>
+        </div>
+      </div>
       <Footer />
     </div>
   );
