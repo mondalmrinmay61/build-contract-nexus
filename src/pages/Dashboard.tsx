@@ -2,55 +2,59 @@
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import ClientDashboard from "@/components/client/ClientDashboard";
+import ContractorDashboard from "@/components/contractor/ContractorDashboard";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { profile, loading } = useAuth();
+
+  const renderDashboardContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <p>Loading dashboard...</p>
+        </div>
+      );
+    }
+
+    // If profile is not completed, show prompt to complete profile
+    if (!profile?.name) {
+      return (
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Complete Your Profile</h2>
+          <p className="mb-4">Please complete your profile information to get started.</p>
+          <Button asChild>
+            <Link to="/profile">Complete Profile</Link>
+          </Button>
+        </Card>
+      );
+    }
+
+    // Show appropriate dashboard based on user type
+    switch (profile?.user_type) {
+      case "client":
+        return <ClientDashboard />;
+      case "contractor":
+        return <ContractorDashboard />;
+      default:
+        return (
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Welcome to ContractHub</h2>
+            <p>There seems to be an issue with your account type. Please contact support.</p>
+          </Card>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
       <main className="flex-grow bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Dashboard
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Welcome to your ContractHub dashboard.
-              </p>
-            </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
-                <div className="sm:col-span-1">
-                  <dt className="text-sm font-medium text-gray-500">Full name</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{profile?.name || "Not set"}</dd>
-                </div>
-                <div className="sm:col-span-1">
-                  <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{profile?.email || "Not set"}</dd>
-                </div>
-                <div className="sm:col-span-1">
-                  <dt className="text-sm font-medium text-gray-500">User type</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {profile?.user_type ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
-                        {profile.user_type}
-                      </span>
-                    ) : (
-                      "Not set"
-                    )}
-                  </dd>
-                </div>
-                <div className="sm:col-span-1">
-                  <dt className="text-sm font-medium text-gray-500">Verified</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {profile?.verified ? "Yes" : "No"}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </div>
+          {renderDashboardContent()}
         </div>
       </main>
       <Footer />

@@ -14,6 +14,9 @@ import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import NewProject from "./pages/projects/NewProject";
+import ProjectDetail from "./pages/projects/ProjectDetail";
+import BrowseProjects from "./pages/projects/BrowseProjects";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +30,9 @@ const AppRoutes = () => (
     
     <Route element={<ProtectedRoute />}>
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/projects/new" element={<NewProject />} />
+      <Route path="/projects/:id" element={<ProjectDetail />} />
+      <Route path="/projects/browse" element={<BrowseProjects />} />
     </Route>
     
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
