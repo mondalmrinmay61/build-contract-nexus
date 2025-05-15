@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Server, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,13 +50,15 @@ const AdminPlatformSettings = () => {
       
       return data[0];
     },
-    onSuccess: (data) => {
-      if (data) {
-        setClientFeePercentage(data.client_fee_percentage.toString());
-        setContractorFeePercentage(data.contractor_fee_percentage.toString());
-      }
-    }
   });
+
+  // Use useEffect instead of onSuccess in the query
+  useEffect(() => {
+    if (settings) {
+      setClientFeePercentage(settings.client_fee_percentage.toString());
+      setContractorFeePercentage(settings.contractor_fee_percentage.toString());
+    }
+  }, [settings]);
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (updatedSettings: { 

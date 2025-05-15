@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
+import { Shield, ShieldCheck, AlertTriangle, ShieldX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -47,9 +46,7 @@ interface DisputeWithRelations {
     project_id: string | null;
     contractor_id: string | null;
   } | null;
-  projects: {
-    title: string;
-  } | null;
+  project_title?: string;
 }
 
 const AdminDisputesList = () => {
@@ -67,15 +64,34 @@ const AdminDisputesList = () => {
         .select(`
           *,
           contracts:contract_id (*),
-          raised_by:raised_by_id (name, user_type),
-          projects:contracts.project_id (title)
+          raised_by:raised_by_id (name, user_type)
         `)
         .order("created_at", { ascending: false });
 
       if (error) {
         throw error;
       }
-      return data as DisputeWithRelations[];
+
+      const disputesWithProjectTitles = await Promise.all((data || []).map(async (dispute) => {
+        if (dispute.contracts?.project_id) {
+          const { data: projectData } = await supabase
+            .from("projects")
+            .select("title")
+            .eq("id", dispute.contracts.project_id)
+            .single();
+          
+          return {
+            ...dispute,
+            project_title: projectData?.title || "Unknown Project"
+          };
+        }
+        return {
+          ...dispute,
+          project_title: "Unknown Project"
+        };
+      }));
+
+      return disputesWithProjectTitles as DisputeWithRelations[];
     },
   });
 
@@ -131,7 +147,7 @@ const AdminDisputesList = () => {
       case "open":
         return (
           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-            <ShieldAlert className="h-3 w-3 mr-1" /> Open
+            <AlertTriangle className="h-3 w-3 mr-1" /> Open
           </Badge>
         );
       case "resolved":
@@ -187,7 +203,7 @@ const AdminDisputesList = () => {
                         : "N/A"}
                     </TableCell>
                     <TableCell>{dispute.raised_by?.name || "Unknown"}</TableCell>
-                    <TableCell>{dispute.projects?.title || "Unknown Project"}</TableCell>
+                    <TableCell>{dispute.project_title}</TableCell>
                     <TableCell className="max-w-xs truncate">
                       {dispute.reason}
                     </TableCell>

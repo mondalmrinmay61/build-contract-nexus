@@ -1,6 +1,6 @@
 
 import { format } from "date-fns";
-import { Shield, ShieldCheck, ShieldX } from "lucide-react";
+import { Shield, ShieldCheck, ShieldX, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -30,7 +30,7 @@ const DisputesList = ({ disputes }: DisputesListProps) => {
       case "open":
         return (
           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-            <ShieldAlert className="h-3 w-3 mr-1" /> Open
+            <AlertTriangle className="h-3 w-3 mr-1" /> Open
           </Badge>
         );
       case "resolved":

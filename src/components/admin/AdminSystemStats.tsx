@@ -53,14 +53,14 @@ const AdminSystemStats = () => {
       ] = await Promise.all([
         usersPromise,
         projectsPromise,
-        contractsResult,
+        contractsPromise,
         disputesPromise,
         earningsPromise
       ]);
       
       // Calculate total earnings
       const totalEarnings = earningsResult.data?.reduce(
-        (sum, item) => sum + (parseFloat(item.total_platform_earning) || 0), 
+        (sum, item) => sum + (parseFloat(String(item.total_platform_earning)) || 0), 
         0
       ) || 0;
       
