@@ -41,7 +41,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const UserProfile = () => {
-  const { user, profile, loading, updateProfile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const [isUpdating, setIsUpdating] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -123,7 +123,7 @@ const UserProfile = () => {
       const profileData = {
         ...data,
         avatar_url,
-        updated_at: new Date(),
+        updated_at: new Date().toISOString(), // Convert Date to string
       };
 
       // Update profile in Supabase
@@ -134,9 +134,18 @@ const UserProfile = () => {
 
       if (error) throw error;
 
-      // Update local state
-      if (updateProfile) {
-        await updateProfile();
+      // Refresh profile data by refetching from database
+      const { data: refreshedProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (refreshedProfile) {
+        // If your AuthContext has a refreshProfile or similar method, use that instead
+        // This is a workaround since updateProfile is not available
+        // We'll reload the page to refresh the profile data
+        window.location.reload();
       }
 
       toast.success("Profile updated successfully");
@@ -190,7 +199,7 @@ const UserProfile = () => {
                     <Avatar className="w-32 h-32">
                       <AvatarImage src={avatarUrl || ""} />
                       <AvatarFallback>
-                        {profile?.name?.charAt(0) || user.email?.charAt(0) || "U"}
+                        {profile?.name?.charAt(0) || user?.email?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col w-full gap-2">
