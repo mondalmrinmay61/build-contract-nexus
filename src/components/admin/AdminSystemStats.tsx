@@ -78,37 +78,78 @@ const AdminSystemStats = () => {
   const { data: monthlyData = [], isLoading: isLoadingMonthlyData } = useQuery({
     queryKey: ["admin-monthly-stats"],
     queryFn: async () => {
-      // Get project counts by month
-      const { data: projectMonthlyData, error: projectError } = await supabase
-        .rpc('get_projects_by_month', { 
-          months_back: 6
-        });
-
-      // Get dispute counts by month
-      const { data: disputeMonthlyData, error: disputeError } = await supabase
-        .rpc('get_disputes_by_month', { 
-          months_back: 6
-        });
-
-      if (projectError || disputeError) {
-        // Fallback data if RPC functions are not available yet
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-        return months.map((month, i) => ({
-          name: month,
-          projects: await getProjectsCountByMonth(i),
-          disputes: await getDisputesCountByMonth(i)
-        }));
+      // Define function to get projects by month
+      async function getProjectsCountByMonth(monthOffset: number): Promise<number> {
+        const date = new Date();
+        date.setMonth(date.getMonth() - monthOffset);
+        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        
+        const { count } = await supabase
+          .from("projects")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", startOfMonth.toISOString())
+          .lte("created_at", endOfMonth.toISOString());
+        
+        return count || 0;
       }
 
-      // Combine the data
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const result: MonthlyData[] = [];
-
-      // Create a map of month data from projects
-      const monthMap = new Map<string, MonthlyData>();
+      // Define function to get disputes by month
+      async function getDisputesCountByMonth(monthOffset: number): Promise<number> {
+        const date = new Date();
+        date.setMonth(date.getMonth() - monthOffset);
+        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        
+        const { count } = await supabase
+          .from("disputes")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", startOfMonth.toISOString())
+          .lte("created_at", endOfMonth.toISOString());
+        
+        return count || 0;
+      }
       
-      if (projectMonthlyData) {
-        projectMonthlyData.forEach((item: any) => {
+      try {
+        // Get project counts by month
+        const { data: projectMonthlyData, error: projectError } = await supabase
+          .rpc('get_projects_by_month', { 
+            months_back: 6
+          });
+
+        // Get dispute counts by month
+        const { data: disputeMonthlyData, error: disputeError } = await supabase
+          .rpc('get_disputes_by_month', { 
+            months_back: 6
+          });
+
+        if (projectError || disputeError) {
+          // Fallback data if RPC functions are not available yet
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+          const result: MonthlyData[] = [];
+          
+          // Fetch data for each month
+          for (let i = 0; i < months.length; i++) {
+            result.push({
+              name: months[i],
+              projects: await getProjectsCountByMonth(5 - i),
+              disputes: await getDisputesCountByMonth(5 - i)
+            });
+          }
+          
+          return result;
+        }
+
+        // Combine the data
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthMap = new Map<string, MonthlyData>();
+        
+        // Type assertion for projectMonthlyData and disputeMonthlyData
+        const typedProjectData = projectMonthlyData as Array<{ month: string; count: number }> || [];
+        const typedDisputeData = disputeMonthlyData as Array<{ month: string; count: number }> || [];
+        
+        // Create a map of month data from projects
+        typedProjectData.forEach((item) => {
           const monthIndex = new Date(item.month).getMonth();
           const monthName = monthNames[monthIndex];
           monthMap.set(monthName, {
@@ -117,11 +158,9 @@ const AdminSystemStats = () => {
             disputes: 0
           });
         });
-      }
 
-      // Add dispute counts
-      if (disputeMonthlyData) {
-        disputeMonthlyData.forEach((item: any) => {
+        // Add dispute counts
+        typedDisputeData.forEach((item) => {
           const monthIndex = new Date(item.month).getMonth();
           const monthName = monthNames[monthIndex];
           
@@ -139,48 +178,19 @@ const AdminSystemStats = () => {
             });
           }
         });
-      }
 
-      // Convert map to array and sort by month
-      return Array.from(monthMap.values()).sort((a, b) => {
-        const monthA = monthNames.indexOf(a.name);
-        const monthB = monthNames.indexOf(b.name);
-        return monthA - monthB;
-      });
+        // Convert map to array and sort by month
+        return Array.from(monthMap.values()).sort((a, b) => {
+          const monthA = monthNames.indexOf(a.name);
+          const monthB = monthNames.indexOf(b.name);
+          return monthA - monthB;
+        });
+      } catch (error) {
+        console.error("Error fetching monthly data:", error);
+        return [];
+      }
     }
   });
-
-  // Helper function to get projects count by month if RPC is not available
-  async function getProjectsCountByMonth(monthOffset: number): Promise<number> {
-    const date = new Date();
-    date.setMonth(date.getMonth() - monthOffset);
-    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    
-    const { count } = await supabase
-      .from("projects")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", startOfMonth.toISOString())
-      .lte("created_at", endOfMonth.toISOString());
-    
-    return count || 0;
-  }
-
-  // Helper function to get disputes count by month if RPC is not available
-  async function getDisputesCountByMonth(monthOffset: number): Promise<number> {
-    const date = new Date();
-    date.setMonth(date.getMonth() - monthOffset);
-    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    
-    const { count } = await supabase
-      .from("disputes")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", startOfMonth.toISOString())
-      .lte("created_at", endOfMonth.toISOString());
-    
-    return count || 0;
-  }
 
   return (
     <div className="space-y-6">
