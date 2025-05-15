@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,7 +81,7 @@ const NewProject = () => {
   });
 
   // Fetch categories on component mount
-  useState(() => {
+  useEffect(() => {
     const fetchCategories = async () => {
       try {
         const { data, error } = await supabase
