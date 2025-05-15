@@ -154,38 +154,45 @@ const AdminSystemStats = () => {
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthMap = new Map<string, MonthlyData>();
         
-        // Type assertion for projectMonthlyData and disputeMonthlyData
-        const typedProjectData = projectMonthlyData as ProjectMonthlyData[] || [];
-        const typedDisputeData = disputeMonthlyData as DisputeMonthlyData[] || [];
+        // Ensure we're working with arrays
+        const typedProjectData: ProjectMonthlyData[] = Array.isArray(projectMonthlyData) ? projectMonthlyData : [];
+        const typedDisputeData: DisputeMonthlyData[] = Array.isArray(disputeMonthlyData) ? disputeMonthlyData : [];
         
         // Create a map of month data from projects
         for (const item of typedProjectData) {
-          const monthIndex = new Date(item.month).getMonth();
-          const monthName = monthNames[monthIndex];
-          monthMap.set(monthName, {
-            name: monthName,
-            projects: item.count,
-            disputes: 0
-          });
+          if (item && item.month) {
+            const monthDate = new Date(item.month);
+            const monthIndex = monthDate.getMonth();
+            const monthName = monthNames[monthIndex];
+            
+            monthMap.set(monthName, {
+              name: monthName,
+              projects: item.count,
+              disputes: 0
+            });
+          }
         }
 
         // Add dispute counts
         for (const item of typedDisputeData) {
-          const monthIndex = new Date(item.month).getMonth();
-          const monthName = monthNames[monthIndex];
-          
-          if (monthMap.has(monthName)) {
-            const existing = monthMap.get(monthName)!;
-            monthMap.set(monthName, {
-              ...existing,
-              disputes: item.count
-            });
-          } else {
-            monthMap.set(monthName, {
-              name: monthName,
-              projects: 0,
-              disputes: item.count
-            });
+          if (item && item.month) {
+            const monthDate = new Date(item.month);
+            const monthIndex = monthDate.getMonth();
+            const monthName = monthNames[monthIndex];
+            
+            if (monthMap.has(monthName)) {
+              const existing = monthMap.get(monthName)!;
+              monthMap.set(monthName, {
+                ...existing,
+                disputes: item.count
+              });
+            } else {
+              monthMap.set(monthName, {
+                name: monthName,
+                projects: 0,
+                disputes: item.count
+              });
+            }
           }
         }
 
