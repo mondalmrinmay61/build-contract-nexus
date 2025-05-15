@@ -19,6 +19,16 @@ interface MonthlyData {
   disputes: number;
 }
 
+interface ProjectMonthlyData {
+  month: string;
+  count: number;
+}
+
+interface DisputeMonthlyData {
+  month: string;
+  count: number;
+}
+
 const AdminSystemStats = () => {
   const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ["admin-system-stats"],
@@ -78,38 +88,6 @@ const AdminSystemStats = () => {
   const { data: monthlyData = [], isLoading: isLoadingMonthlyData } = useQuery({
     queryKey: ["admin-monthly-stats"],
     queryFn: async () => {
-      // Define function to get projects by month
-      async function getProjectsCountByMonth(monthOffset: number): Promise<number> {
-        const date = new Date();
-        date.setMonth(date.getMonth() - monthOffset);
-        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-        
-        const { count } = await supabase
-          .from("projects")
-          .select("id", { count: "exact", head: true })
-          .gte("created_at", startOfMonth.toISOString())
-          .lte("created_at", endOfMonth.toISOString());
-        
-        return count || 0;
-      }
-
-      // Define function to get disputes by month
-      async function getDisputesCountByMonth(monthOffset: number): Promise<number> {
-        const date = new Date();
-        date.setMonth(date.getMonth() - monthOffset);
-        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-        
-        const { count } = await supabase
-          .from("disputes")
-          .select("id", { count: "exact", head: true })
-          .gte("created_at", startOfMonth.toISOString())
-          .lte("created_at", endOfMonth.toISOString());
-        
-        return count || 0;
-      }
-      
       try {
         // Get project counts by month
         const { data: projectMonthlyData, error: projectError } = await supabase
@@ -123,12 +101,44 @@ const AdminSystemStats = () => {
             months_back: 6
           });
 
-        if (projectError || disputeError) {
+        // Define function to get projects by month as a fallback
+        async function getProjectsCountByMonth(monthOffset: number): Promise<number> {
+          const date = new Date();
+          date.setMonth(date.getMonth() - monthOffset);
+          const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+          const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+          
+          const { count } = await supabase
+            .from("projects")
+            .select("id", { count: "exact", head: true })
+            .gte("created_at", startOfMonth.toISOString())
+            .lte("created_at", endOfMonth.toISOString());
+          
+          return count || 0;
+        }
+
+        // Define function to get disputes by month as a fallback
+        async function getDisputesCountByMonth(monthOffset: number): Promise<number> {
+          const date = new Date();
+          date.setMonth(date.getMonth() - monthOffset);
+          const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+          const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+          
+          const { count } = await supabase
+            .from("disputes")
+            .select("id", { count: "exact", head: true })
+            .gte("created_at", startOfMonth.toISOString())
+            .lte("created_at", endOfMonth.toISOString());
+          
+          return count || 0;
+        }
+
+        if (projectError || disputeError || !projectMonthlyData || !disputeMonthlyData) {
           // Fallback data if RPC functions are not available yet
           const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
           const result: MonthlyData[] = [];
           
-          // Fetch data for each month
+          // Use manual creation of data as a fallback
           for (let i = 0; i < months.length; i++) {
             result.push({
               name: months[i],
@@ -145,11 +155,11 @@ const AdminSystemStats = () => {
         const monthMap = new Map<string, MonthlyData>();
         
         // Type assertion for projectMonthlyData and disputeMonthlyData
-        const typedProjectData = projectMonthlyData as Array<{ month: string; count: number }> || [];
-        const typedDisputeData = disputeMonthlyData as Array<{ month: string; count: number }> || [];
+        const typedProjectData = projectMonthlyData as ProjectMonthlyData[] || [];
+        const typedDisputeData = disputeMonthlyData as DisputeMonthlyData[] || [];
         
         // Create a map of month data from projects
-        typedProjectData.forEach((item) => {
+        for (const item of typedProjectData) {
           const monthIndex = new Date(item.month).getMonth();
           const monthName = monthNames[monthIndex];
           monthMap.set(monthName, {
@@ -157,10 +167,10 @@ const AdminSystemStats = () => {
             projects: item.count,
             disputes: 0
           });
-        });
+        }
 
         // Add dispute counts
-        typedDisputeData.forEach((item) => {
+        for (const item of typedDisputeData) {
           const monthIndex = new Date(item.month).getMonth();
           const monthName = monthNames[monthIndex];
           
@@ -177,7 +187,7 @@ const AdminSystemStats = () => {
               disputes: item.count
             });
           }
-        });
+        }
 
         // Convert map to array and sort by month
         return Array.from(monthMap.values()).sort((a, b) => {
