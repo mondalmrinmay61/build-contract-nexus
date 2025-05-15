@@ -20,6 +20,9 @@ import BrowseProjects from "./pages/projects/BrowseProjects";
 import UserProfile from "./pages/profile/UserProfile";
 import WalletManagement from "./pages/wallet/WalletManagement";
 import MessagesPage from "./pages/messages/MessagesPage";
+import DisputesPage from "./pages/disputes/DisputesPage";
+import DisputeDetailPage from "./pages/disputes/DisputeDetailPage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +42,9 @@ const AppRoutes = () => (
       <Route path="/profile" element={<UserProfile />} />
       <Route path="/wallet" element={<WalletManagement />} />
       <Route path="/messages" element={<MessagesPage />} />
+      <Route path="/disputes" element={<DisputesPage />} />
+      <Route path="/disputes/:id" element={<DisputeDetailPage />} />
+      <Route path="/admin" element={<AdminDashboard />} />
     </Route>
     
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
