@@ -17,6 +17,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import NewProject from "./pages/projects/NewProject";
 import ProjectDetail from "./pages/projects/ProjectDetail";
 import BrowseProjects from "./pages/projects/BrowseProjects";
+import UserProfile from "./pages/profile/UserProfile";
+import WalletManagement from "./pages/wallet/WalletManagement";
+import MessagesPage from "./pages/messages/MessagesPage";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +36,9 @@ const AppRoutes = () => (
       <Route path="/projects/new" element={<NewProject />} />
       <Route path="/projects/:id" element={<ProjectDetail />} />
       <Route path="/projects/browse" element={<BrowseProjects />} />
+      <Route path="/profile" element={<UserProfile />} />
+      <Route path="/wallet" element={<WalletManagement />} />
+      <Route path="/messages" element={<MessagesPage />} />
     </Route>
     
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
