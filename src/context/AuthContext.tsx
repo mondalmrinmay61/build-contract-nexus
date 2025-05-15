@@ -95,7 +95,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: "You've successfully signed in.",
       });
       
-      navigate('/dashboard');
+      // First fetch the profile to determine user type
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id || '')
+        .single();
+      
+      // Redirect based on user_type
+      if (data && data.user_type === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast({
         title: "Sign in failed",

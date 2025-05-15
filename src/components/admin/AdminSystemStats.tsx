@@ -73,17 +73,114 @@ const AdminSystemStats = () => {
       };
     }
   });
-  
-  // Mock monthly data for the chart
-  // In a real app, this would come from the database with proper aggregation
-  const monthlyData: MonthlyData[] = [
-    { name: "Jan", projects: 4, disputes: 1 },
-    { name: "Feb", projects: 6, disputes: 2 },
-    { name: "Mar", projects: 8, disputes: 1 },
-    { name: "Apr", projects: 10, disputes: 3 },
-    { name: "May", projects: 12, disputes: 2 },
-    { name: "Jun", projects: 16, disputes: 4 },
-  ];
+
+  // Fetch monthly data from the database
+  const { data: monthlyData = [], isLoading: isLoadingMonthlyData } = useQuery({
+    queryKey: ["admin-monthly-stats"],
+    queryFn: async () => {
+      // Get project counts by month
+      const { data: projectMonthlyData, error: projectError } = await supabase
+        .rpc('get_projects_by_month', { 
+          months_back: 6
+        });
+
+      // Get dispute counts by month
+      const { data: disputeMonthlyData, error: disputeError } = await supabase
+        .rpc('get_disputes_by_month', { 
+          months_back: 6
+        });
+
+      if (projectError || disputeError) {
+        // Fallback data if RPC functions are not available yet
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+        return months.map((month, i) => ({
+          name: month,
+          projects: await getProjectsCountByMonth(i),
+          disputes: await getDisputesCountByMonth(i)
+        }));
+      }
+
+      // Combine the data
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const result: MonthlyData[] = [];
+
+      // Create a map of month data from projects
+      const monthMap = new Map<string, MonthlyData>();
+      
+      if (projectMonthlyData) {
+        projectMonthlyData.forEach((item: any) => {
+          const monthIndex = new Date(item.month).getMonth();
+          const monthName = monthNames[monthIndex];
+          monthMap.set(monthName, {
+            name: monthName,
+            projects: item.count,
+            disputes: 0
+          });
+        });
+      }
+
+      // Add dispute counts
+      if (disputeMonthlyData) {
+        disputeMonthlyData.forEach((item: any) => {
+          const monthIndex = new Date(item.month).getMonth();
+          const monthName = monthNames[monthIndex];
+          
+          if (monthMap.has(monthName)) {
+            const existing = monthMap.get(monthName)!;
+            monthMap.set(monthName, {
+              ...existing,
+              disputes: item.count
+            });
+          } else {
+            monthMap.set(monthName, {
+              name: monthName,
+              projects: 0,
+              disputes: item.count
+            });
+          }
+        });
+      }
+
+      // Convert map to array and sort by month
+      return Array.from(monthMap.values()).sort((a, b) => {
+        const monthA = monthNames.indexOf(a.name);
+        const monthB = monthNames.indexOf(b.name);
+        return monthA - monthB;
+      });
+    }
+  });
+
+  // Helper function to get projects count by month if RPC is not available
+  async function getProjectsCountByMonth(monthOffset: number): Promise<number> {
+    const date = new Date();
+    date.setMonth(date.getMonth() - monthOffset);
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    
+    const { count } = await supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", startOfMonth.toISOString())
+      .lte("created_at", endOfMonth.toISOString());
+    
+    return count || 0;
+  }
+
+  // Helper function to get disputes count by month if RPC is not available
+  async function getDisputesCountByMonth(monthOffset: number): Promise<number> {
+    const date = new Date();
+    date.setMonth(date.getMonth() - monthOffset);
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    
+    const { count } = await supabase
+      .from("disputes")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", startOfMonth.toISOString())
+      .lte("created_at", endOfMonth.toISOString());
+    
+    return count || 0;
+  }
 
   return (
     <div className="space-y-6">
@@ -114,7 +211,7 @@ const AdminSystemStats = () => {
         
         <StatCard 
           title="Platform Earnings"
-          value={`$${(stats?.total_earnings || 0).toFixed(2)}`}
+          value={`₹${(stats?.total_earnings || 0).toFixed(2)}`}
           description="Total platform fees collected"
           icon={<TrendingUp />}
           isLoading={isLoadingStats}
@@ -128,17 +225,25 @@ const AdminSystemStats = () => {
         </CardHeader>
         <CardContent>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="projects" fill="#4f46e5" name="Projects" />
-                <Bar dataKey="disputes" fill="#f43f5e" name="Disputes" />
-              </BarChart>
-            </ResponsiveContainer>
+            {isLoadingMonthlyData ? (
+              <div className="flex items-center justify-center h-full">
+                <p>Loading chart data...</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value) => [`${value}`, '']}
+                  />
+                  <Legend />
+                  <Bar dataKey="projects" fill="#4f46e5" name="Projects" />
+                  <Bar dataKey="disputes" fill="#f43f5e" name="Disputes" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>
